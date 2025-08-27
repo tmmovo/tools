@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft方块挖掘时间计算器</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, input {
+            /* width: 100%; */
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .custom-input {
+            margin-top: 5px;
+            display: none;
+        }
+        .checkbox-group {
+            margin-right: 10px;
+        }
+        .checkbox-group label {
+            display: inline-block;
+            margin-right: 10px;
+            font-weight: normal;
+			font-size: 1em;
+			text-align: center;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1b5e20;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #e8f5e9;
+            display: none;
+        }
+        .instant {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .fast {
+            background-color: #fff9c4;
+            color: #f57f17;
+            font-weight: bold;
+        }
+        .tooltip {
+            font-size: 12px;
+            color: #757575;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Minecraft方块挖掘时间计算器</h1>
+        
+        <div class="form-group">
+            <label for="version">游戏版本</label>
+            <select id="version">
+                <option value="java">JAVA版</option>
+                <option value="bedrock">基岩版</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="tool">挖掘工具</label>
+            <select id="tool">
+                <option value="1">不使用对应的挖掘工具</option>
+                <option value="2">木质工具</option>
+                <option value="4">石质工具</option>
+                <option value="5">铜质工具</option>
+                <option value="6">铁质工具</option>
+                <option value="8">钻石质工具</option>
+                <option value="9">下界合金质工具</option>
+                <option value="12">金质工具</option>
+                <option value="2">剪刀</option>
+                <option value="5">剪刀挖掘羊毛</option>
+                <option value="15">剪刀挖掘树叶或蜘蛛网</option>
+                <option value="1.5">剑</option>
+                <option value="15">剑挖掘蜘蛛网</option>
+                <option value="Infinity">剑挖掘竹子和竹笋</option>
+                <option value="custom">自定义工具速度</option>
+            </select>
+            <div id="custom-tool-input" class="custom-input">
+                <input type="number" id="custom-tool-speed" step="0.1" placeholder="输入工具基础速度">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="efficiency">效率等级</label>
+            <input type="number" id="efficiency" min="0" max="5" value="0">
+            <div class="tooltip">生存模式中只能获取最高5级的效率</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="aqua-affinity">水下速掘等级</label>
+            <input type="number" id="aqua-affinity" min="0" max="1" value="0">
+            <div class="tooltip">生存模式中只能获取最高1级的水下速掘</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="haste">急迫等级 & 潮涌能量等级</label>
+            <input type="number" id="haste" min="0" max="2" value="0">
+            <div class="tooltip">这两个等级取较高的填入，生存模式中只能获取最高2级的急迫与1级的潮涌能量</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="fatigue">挖掘疲劳等级</label>
+            <input type="number" id="fatigue" min="0" max="3" value="0">
+            <div class="tooltip">生存模式中只能获取3级的挖掘疲劳</div>
+        </div>
+        
+        <div class="form-group">
+            <label>状态</label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="on-ground">接触地面</label></br>
+                <label><input type="checkbox" id="in-water">眼部浸入水中</label></br>
+                <label><input type="checkbox" id="custom-props">自定义属性</label>
+            </div>
+            
+            <div id="custom-props-inputs" class="custom-input">
+                <div class="form-group">
+                    <label for="submerged-speed">水下挖掘速度 (0-20)</label>
+                    <input type="number" id="submerged-speed" min="0" max="20" step="0.1" value="0.2">
+                </div>
+                <div class="form-group">
+                    <label for="mining-efficiency">挖掘效率 (0-1024)</label>
+                    <input type="number" id="mining-efficiency" min="0" max="1024" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="block-break-speed">方块破坏速度 (0-1024)</label>
+                    <input type="number" id="block-break-speed" min="0" max="1024" value="1">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="hardness">方块硬度</label>
+            <input type="number" id="hardness" step="0.1" value="1.5">
+        </div>
+        
+        <button id="calculate">计算挖掘时间</button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script src="source/js/mcdig.js"></script>
+</body>
+</html>
