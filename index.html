@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>友情链接</title>
+    <style>
+        :root {
+            --primary-color: #ffffff;
+            --secondary-color: #bcbcbc;
+            --accent-color: #007bff;
+            --text-color: #ffffff;
+            --card-bg: #ffffff;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+        
+        h1 {
+            text-align: center;
+            color: var(--accent-color);
+            margin-bottom: 30px;
+            font-weight: 600;
+            position: relative;
+            padding-top: 50px;
+        }
+        
+        .tools-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .tool-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(162, 128, 186, 0.2);
+            width: calc(50% - 30px);
+            min-width: 300px;
+            max-width: 500px;
+            padding: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(162, 128, 186, 0.3);
+        }
+        
+        .tool-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .tool-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+            border: 2px solid var(--secondary-color);
+        }
+        
+        .tool-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-color);
+        }
+        
+        .tool-describe {
+            margin: 10px 0;
+            flex-grow: 1;
+			color: var(--text-color);
+        }
+        
+        .tool-link {
+            display: inline-block;
+            text-decoration: none;
+			border-radius: 5px;
+            background-color: var(--accent-color);
+        }
+        
+        .tool-link:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .home-button {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .home-button:hover {
+            background: var(--secondary-color);
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+        }
+        
+        @media (max-width: 768px) {
+            .tool-card {
+                width: 100%;
+            }
+            
+            .home-button {
+                position: relative;
+                top: 0;
+                left: 0;
+                transform: none;
+                display: block;
+                margin: 0 auto 20px;
+            }
+            
+            h1 {
+                padding-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="home-button">可以给s@mcdr.top发邮件提提对添加工具的建议和工具的BUG</button>
+        
+        <h1>工具列表</h1>
+        
+        <div class="tools-container">
+			<a href="emulatetype.html" target="_blank" rel="noopener noreferrer" class="tool-link">
+			    <div class="tool-header">
+			        <img src="source/img/icon.png" alt="" class="tool-avatar">
+			        <h2 class="tool-title">模拟打字输入效果生成器</h2>
+			    </div>
+			    <p class="tool-describe">可以导出动画代码</p>
+			</a>
+			<a href="v50.html" target="_blank" rel="noopener noreferrer" class="tool-link">
+			    <div class="tool-header">
+			        <img src="source/img/icon.png" alt="" class="tool-avatar">
+			        <h2 class="tool-title">星期四生成器</h2>
+			    </div>
+			    <p class="tool-describe">什么时候都是星期四，转发给好友，让ta微你50</p>
+			</a>
+			<a href="mcdig.html" target="_blank" rel="noopener noreferrer" class="tool-link">
+			    <div class="tool-header">
+			        <img src="source/img/icon.png" alt="" class="tool-avatar">
+			        <h2 class="tool-title">我的世界挖掘时间计算器</h2>
+			    </div>
+			    <p class="tool-describe">包含全面配置，方块硬度可以到WIKI上面查找</p>
+			</a>
+		</div>
+    </div>
+</body>
+</html>
