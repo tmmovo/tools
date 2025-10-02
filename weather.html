@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态天气时间背景生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+            z-index: 10;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin: 20px;
+            transition: opacity 0.5s ease;
+        }
+        
+        .container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input, select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 200px;
+        }
+        
+        button {
+            padding: 12px 25px;
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            align-self: flex-end;
+        }
+        
+        button:hover {
+            background-color: #385d8a;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .record-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .record-btn {
+            background-color: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .stop-btn {
+            background-color: #2ecc71;
+        }
+        
+        .download-link {
+            display: none;
+            padding: 12px 25px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .timer-display {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        #weatherCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .description {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="weatherCanvas"></canvas>
+    
+    <div class="container" id="controlContainer">
+        <h1>天气时间背景生成器</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="timeInput">选择时间：</label>
+                <input type="time" id="timeInput" value="12:00">
+            </div>
+            
+            <div class="control-group">
+                <label for="weatherSelect">选择天气：</label>
+                <select id="weatherSelect">
+                    <option value="sunny">晴天</option>
+                    <option value="cloudy">多云</option>
+                    <option value="rainy">小雨</option>
+                    <option value="heavyRain">大雨</option>
+                    <option value="stormy">雷雨</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="recordTime">录制时间(秒 考虑到设备原因 建议把时间控制在60秒以下)：</label>
+                <input type="number" id="recordTime" min="1" max="60" value="10">
+            </div>
+            
+            <button id="generateBtn">生成背景</button>
+        </div>
+        
+        <div class="record-controls">
+            <button id="recordBtn" class="record-btn">开始录制(注意先点击生成)</button>
+            <button id="stopBtn" class="stop-btn" disabled>停止录制</button>
+            <div id="timerDisplay" class="timer-display"></div>
+            <a id="downloadLink" class="download-link" download="weather_animation.webm">下载视频(请使用支持的浏览器)</a>
+        </div>
+    </div>
+
+    <script src="source/weather.js"></script>
+</body>
+</html>
