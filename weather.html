@@ -188,6 +188,432 @@
         </div>
     </div>
 
-    <script src="source/weather.js"></script>
+    <script>
+        // 获取DOM元素
+        const canvas = document.getElementById('weatherCanvas');
+        const ctx = canvas.getContext('2d');
+        const timeInput = document.getElementById('timeInput');
+        const weatherSelect = document.getElementById('weatherSelect');
+        const generateBtn = document.getElementById('generateBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const downloadLink = document.getElementById('downloadLink');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const recordTimeInput = document.getElementById('recordTime');
+        const controlContainer = document.getElementById('controlContainer');
+        
+        // 录制相关变量
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recording = false;
+        let countdownTimer = null;
+        let remainingTime = 0;
+        
+        // 设置Canvas尺寸为窗口大小
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        // 初始化Canvas尺寸
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 雨滴类
+        class Raindrop {
+            constructor(canvasWidth, canvasHeight, type = 'rainy') {
+                this.x = Math.random() * canvasWidth;
+                this.y = Math.random() * canvasHeight * 0.5;
+                
+                // 根据天气类型调整雨滴属性
+                if (type === 'heavyRain' || type === 'stormy') {
+                    this.speed = 5 + Math.random() * 5;
+                    this.length = 20 + Math.random() * 20;
+                    this.opacity = 0.5 + Math.random() * 0.4;
+                    this.width = 1.5;
+                } else {
+                    this.speed = 2 + Math.random() * 3;
+                    this.length = 10 + Math.random() * 15;
+                    this.opacity = 0.3 + Math.random() * 0.5;
+                    this.width = 1;
+                }
+            }
+            
+            update(canvasHeight) {
+                this.y += this.speed;
+                
+                if (this.y > canvasHeight) {
+                    this.y = -this.length;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+            
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x, this.y + this.length);
+                ctx.strokeStyle = `rgba(200, 200, 255, ${this.opacity})`;
+                ctx.lineWidth = this.width;
+                ctx.stroke();
+            }
+        }
+        
+        // 闪电类
+        class Lightning {
+            constructor(canvasWidth, canvasHeight) {
+                this.active = false;
+                this.timer = 0;
+                this.maxTime = 0.2 + Math.random() * 0.3;
+                this.cooldown = 3 + Math.random() * 5;
+                this.canvasWidth = canvasWidth;
+                this.canvasHeight = canvasHeight;
+                this.branches = this.generateBranches();
+                this.flashState = 0; // 0:无闪光, 1:闪电开始时闪光, 2:闪电结束时闪光
+                this.flashTimer = 0;
+                this.flashDuration = 0.1;
+            }
+            
+            generateBranches() {
+                const branches = [];
+                const mainLength = this.canvasHeight * 0.7;
+                const startX = this.canvasWidth * (0.3 + Math.random() * 0.4);
+                
+                // 主闪电路径
+                const mainBranch = {
+                    points: [
+                        {x: startX, y: 0},
+                        {x: startX + (Math.random() - 0.5) * 50, y: mainLength * 0.3},
+                        {x: startX + (Math.random() - 0.5) * 80, y: mainLength * 0.6},
+                        {x: startX + (Math.random() - 0.5) * 120, y: mainLength}
+                    ]
+                };
+                branches.push(mainBranch);
+                
+                // 添加一些分支
+                for (let i = 0; i < 3 + Math.floor(Math.random() * 3); i++) {
+                    const branchPoint = Math.random();
+                    const startIdx = Math.floor(branchPoint * (mainBranch.points.length - 1));
+                    
+                    const branch = {
+                        points: [
+                            {...mainBranch.points[startIdx]},
+                            {
+                                x: mainBranch.points[startIdx].x + (Math.random() - 0.5) * 100,
+                                y: mainBranch.points[startIdx].y + (Math.random() * 100)
+                            }
+                        ]
+                    };
+                    branches.push(branch);
+                }
+                
+                return branches;
+            }
+            
+            update(deltaTime) {
+                if (this.active) {
+                    this.timer += deltaTime;
+                    
+                    // 闪电开始时触发闪光
+                    if (this.timer <= deltaTime) {
+                        this.flashState = 1;
+                        this.flashTimer = 0;
+                    }
+                    
+                    // 闪电结束时触发闪光
+                    if (this.timer >= this.maxTime && this.flashState !== 2) {
+                        this.flashState = 2;
+                        this.flashTimer = 0;
+                    }
+                    
+                    if (this.timer >= this.maxTime) {
+                        this.active = false;
+                        this.timer = 0;
+                    }
+                } else {
+                    this.timer += deltaTime;
+                    if (this.timer >= this.cooldown) {
+                        this.active = true;
+                        this.timer = 0;
+                        this.maxTime = 0.2 + Math.random() * 0.3;
+                        this.branches = this.generateBranches();
+                    }
+                }
+                
+                // 更新闪光计时器
+                if (this.flashState > 0) {
+                    this.flashTimer += deltaTime;
+                    if (this.flashTimer >= this.flashDuration) {
+                        this.flashState = 0;
+                    }
+                }
+            }
+            
+            draw(ctx) {
+                if (this.active) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    
+                    // 闪电核心部分
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 3;
+                    this.drawBranches(ctx);
+                    
+                    // 闪电光晕效果
+                    ctx.strokeStyle = 'rgba(200, 220, 255, 0.5)';
+                    ctx.lineWidth = 10;
+                    this.drawBranches(ctx);
+                    
+                    ctx.restore();
+                }
+                
+                // 绘制闪光效果
+                if (this.flashState > 0) {
+                    const flashAlpha = 0.3 * (1 - this.flashTimer / this.flashDuration);
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.restore();
+                }
+            }
+            
+            drawBranches(ctx) {
+                this.branches.forEach(branch => {
+                    ctx.beginPath();
+                    branch.points.forEach((point, idx) => {
+                        if (idx === 0) {
+                            ctx.moveTo(point.x, point.y);
+                        } else {
+                            ctx.lineTo(point.x, point.y);
+                        }
+                    });
+                    ctx.stroke();
+                });
+            }
+        }
+        
+        // 根据时间计算背景颜色
+        function getBackgroundColors(time) {
+            const [hours, minutes] = time.split(':').map(Number);
+            const totalMinutes = hours * 60 + minutes;
+            
+            let brightness;
+            if (totalMinutes >= 5 * 60 && totalMinutes < 7 * 60) {
+                brightness = 0.3 + 0.2 * (totalMinutes - 5 * 60) / 120;
+            } else if (totalMinutes >= 7 * 60 && totalMinutes < 17 * 60) {
+                brightness = 0.5 + 0.4 * Math.sin(Math.PI * (totalMinutes - 7 * 60) / (10 * 60));
+            } else if (totalMinutes >= 17 * 60 && totalMinutes < 19 * 60) {
+                brightness = 0.5 - 0.3 * (totalMinutes - 17 * 60) / 120;
+            } else {
+                brightness = 0.2;
+            }
+            
+            // 根据天气调整基础颜色
+            let baseColor;
+            const weather = weatherSelect.value;
+            
+            if (weather === 'stormy') {
+                baseColor = [100, 100, 150]; // 深蓝灰色
+            } else if (weather === 'heavyRain') {
+                baseColor = [120, 120, 150]; // 中灰色
+            } else if (weather === 'rainy') {
+                baseColor = [180, 180, 200]; // 亮灰色
+            } else {
+                baseColor = [200, 220, 250]; // 浅蓝色
+            }
+            
+            // 计算渐变颜色（从下向上变亮）
+            const topBrightness = brightness * 1.2;
+            const bottomBrightness = brightness * 0.8;
+            
+            return {
+                top: `rgba(${baseColor[0] * topBrightness}, ${baseColor[1] * topBrightness}, ${baseColor[2] * topBrightness}, 1)`,
+                bottom: `rgba(${baseColor[0] * bottomBrightness}, ${baseColor[1] * bottomBrightness}, ${baseColor[2] * bottomBrightness}, 1)`
+            };
+        }
+        
+        // 创建雨滴数组和闪电对象
+        let raindrops = [];
+        let lightning = new Lightning(canvas.width, canvas.height);
+        let lastTime = 0;
+        
+        // 初始化雨滴
+        function initRaindrops() {
+            raindrops = [];
+            const weather = weatherSelect.value;
+            let numRaindrops;
+            
+            if (weather === 'heavyRain' || weather === 'stormy') {
+                numRaindrops = Math.min(500, Math.floor(canvas.width * canvas.height / 4000));
+            } else if (weather === 'rainy') {
+                numRaindrops = Math.min(200, Math.floor(canvas.width * canvas.height / 10000));
+            } else {
+                numRaindrops = 0;
+            }
+            
+            for (let i = 0; i < numRaindrops; i++) {
+                raindrops.push(new Raindrop(canvas.width, canvas.height, weather));
+            }
+        }
+        
+        // 绘制背景和天气效果
+        function drawBackground(timestamp) {
+            const deltaTime = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+            
+            const time = timeInput.value;
+            const weather = weatherSelect.value;
+            
+            // 获取背景颜色
+            const colors = getBackgroundColors(time);
+            
+            // 创建背景渐变（从下向上）
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, colors.bottom);
+            gradient.addColorStop(1, colors.top);
+            
+            // 填充背景
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 根据天气类型绘制效果
+            if (weather === 'rainy' || weather === 'heavyRain' || weather === 'stormy') {
+                // 绘制雨滴
+                raindrops.forEach(raindrop => {
+                    raindrop.update(canvas.height);
+                    raindrop.draw(ctx);
+                });
+            }
+            
+            if (weather === 'stormy') {
+                // 更新和绘制闪电
+                lightning.update(deltaTime);
+                lightning.draw(ctx);
+            }
+            
+            requestAnimationFrame(drawBackground);
+        }
+        
+        // 开始录制
+        async function startRecording() {
+            try {
+                const recordTime = parseInt(recordTimeInput.value) + 0.1 || 10;
+                if (recordTime < 1 || recordTime > 60) {
+                    alert('录制时间必须在1-60秒之间');
+                    return;
+                }
+                
+                // 隐藏控制面板
+                controlContainer.classList.add('hidden');
+                
+                // 设置按钮状态
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                
+                // 初始化录制变量
+                recordedChunks = [];
+                recording = true;
+                remainingTime = recordTime;
+                
+                // 更新倒计时显示
+                updateTimerDisplay();
+                
+                // 创建Canvas流
+                const stream = canvas.captureStream(30);
+                
+                // 创建媒体录制器
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9',
+                    videoBitsPerSecond: 5000000
+                });
+                
+                // 处理数据可用事件
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                // 处理录制停止事件
+                mediaRecorder.onstop = () => {
+                    // 创建Blob
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    
+                    // 创建下载链接
+                    const url = URL.createObjectURL(blob);
+                    downloadLink.href = url;
+                    downloadLink.style.display = 'block';
+                    
+                    // 显示控制面板
+                    controlContainer.classList.remove('hidden');
+                    
+                    // 重置按钮状态
+                    recordBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    
+                    // 停止倒计时
+                    clearInterval(countdownTimer);
+                    timerDisplay.textContent = '';
+                    
+                    recording = false;
+                };
+                
+                // 开始录制
+                mediaRecorder.start(100); // 每100ms收集一次数据
+                
+                // 启动倒计时
+                countdownTimer = setInterval(() => {
+                    remainingTime--;
+                    updateTimerDisplay();
+                    
+                    if (remainingTime <= 0) {
+                        stopRecording();
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                console.error('录制错误:', error);
+                alert('录制失败: ' + error.message);
+                
+                // 恢复UI状态
+                controlContainer.classList.remove('hidden');
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+                recording = false;
+                clearInterval(countdownTimer);
+                timerDisplay.textContent = '';
+            }
+        }
+        
+        // 停止录制
+        function stopRecording() {
+            if (mediaRecorder && recording) {
+                mediaRecorder.stop();
+                clearInterval(countdownTimer);
+            }
+        }
+        
+        // 更新倒计时显示
+        function updateTimerDisplay() {
+            timerDisplay.textContent = `剩余录制时间: ${remainingTime}秒`;
+        }
+        
+        // 初始化
+        function init() {
+            initRaindrops();
+            requestAnimationFrame(drawBackground);
+            
+            // 添加事件监听器
+            recordBtn.addEventListener('click', startRecording);
+            stopBtn.addEventListener('click', stopRecording);
+            generateBtn.addEventListener('click', function() {
+                initRaindrops();
+                lightning = new Lightning(canvas.width, canvas.height);
+            });
+        }
+        
+        // 初始绘制
+        init();
+    </script>
 </body>
 </html>
