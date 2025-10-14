@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>半透明白色水印提取工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .main-content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        .upload-section, .preview-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px dashed #dee2e6;
+        }
+        .upload-area {
+            text-align: center;
+            padding: 40px 20px;
+            border: 3px dashed #4b6cb7;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(75, 108, 183, 0.05);
+        }
+        .upload-area:hover {
+            background: rgba(75, 108, 183, 0.1);
+            border-color: #3a5998;
+        }
+        .upload-area i {
+            font-size: 3rem;
+            color: #4b6cb7;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .upload-area p {
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .btn {
+            background: linear-gradient(90deg, #4b6cb7 0%, #3a5998 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 5px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .options {
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .option-group {
+            margin-bottom: 15px;
+        }
+        .option-group label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+        .option-group label:hover {
+            background: #e9ecef;
+        }
+        .option-group input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        canvas {
+            max-width: 100%;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background-image: 
+                linear-gradient(45deg, #ccc 25%, transparent 25%),
+                linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #ccc 75%),
+                linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        .preview-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .preview-container h3 {
+            margin-bottom: 10px;
+            color: #495057;
+            font-size: 1.2rem;
+        }
+        .download-section {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+        .info-panel {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-panel h4 {
+            margin-bottom: 10px;
+            color: #0c5460;
+        }
+        .info-panel ul {
+            padding-left: 20px;
+        }
+        .info-panel li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>半透明白色水印提取工具</h1>
+            <p class="description">从纯黑背景中精确提取半透明白色水印，保留正确的透明度信息</p>
+        </header>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <i>📁</i>
+                    <p>点击或拖拽图片到此区域上传</p>
+                    <p class="text-muted">支持 PNG, JPG, JPEG 格式</p>
+                    <input type="file" id="fileInput" accept="image/*">
+                    <button class="btn" onclick="document.getElementById('fileInput').click()">
+                        选择图片
+                    </button>
+                </div>
+
+                <div class="options">
+                    <h3>处理选项</h3>
+                    <div class="option-group">
+                        <label>
+                            <input type="checkbox" id="useLinear" checked>
+                            使用线性光计算（更精确，推荐）
+                        </label>
+                    </div>
+                    <div class="option-group">
+                        <label>
+                            <input type="checkbox" id="premultiplyAlpha">
+                            预乘Alpha通道（某些情况下效果更好）
+                        </label>
+                    </div>
+                </div>
+
+                <div class="info-panel">
+                    <h4>使用说明</h4>
+                    <ul>
+                        <li>上传背景为纯黑色(0,0,0)的图片</li>
+                        <li>水印应为半透明白色(255,255,255,α)</li>
+                        <li>右键结果图片可以另存为PNG格式</li>
+                        <li>水印如果不透明度过低应<strong>取消上方使用线性光</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="preview-section">
+                <div class="preview-container">
+                    <h3>原图预览</h3>
+                    <canvas id="originalCanvas" width="400" height="300"></canvas>
+                </div>
+
+                <div class="preview-container">
+                    <h3>提取结果（透明背景）</h3>
+                    <canvas id="resultCanvas" width="400" height="300"></canvas>
+                </div>
+
+                <div class="download-section">
+                    <a id="downloadLink" class="btn" download="extracted_watermark.png">
+                        下载透明水印
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="source/wmp.js"></script>
+</body>
+</html>
