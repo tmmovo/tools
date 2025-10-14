@@ -94,14 +94,20 @@
 
         // 处理水印提取
         function processWatermark() {
-            if (!currentImage) return;
+            console.log('processWatermark started');
+            if (!currentImage) {
+                console.log('No current image, returning');
+                return;
+            }
 
             const width = originalCanvas.width;
             const height = originalCanvas.height;
+            console.log('Processing watermark with dimensions:', { width, height });
 
             // 获取原图像素数据
             const imageData = originalCtx.getImageData(0, 0, width, height);
             const data = imageData.data;
+            console.log('Original image data length:', data.length);
 
             // 创建输出图像数据
             const outputData = resultCtx.createImageData(width, height);
@@ -109,6 +115,10 @@
 
             const useLinear = useLinearCheckbox.checked;
             const premultiply = premultiplyCheckbox.checked;
+            console.log('Processing options:', { useLinear, premultiply });
+
+            let transparentPixels = 0;
+            let opaquePixels = 0;
 
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i];
@@ -122,6 +132,7 @@
                     output[i + 1] = 0; // G
                     output[i + 2] = 0; // B
                     output[i + 3] = 0; // A
+                    transparentPixels++;
                     continue;
                 }
 
@@ -156,13 +167,20 @@
                     output[i + 2] = 255; // B
                     output[i + 3] = Math.round(alpha * 255); // A
                 }
+                
+                if (alpha > 0.1) {
+                    opaquePixels++;
+                }
             }
+
+            console.log('Pixel statistics:', { transparentPixels, opaquePixels, totalPixels: width * height });
 
             // 显示处理结果并更新棋盘背景
             updateChessboardBackgroundWithData(outputData);
 
             // 更新下载链接
             updateDownloadLink();
+            console.log('processWatermark completed');
         }
 
         // 更新下载链接
@@ -181,17 +199,37 @@
         let currentImageData = null;
 
         function startChessboardAnimation() {
+            console.log('Starting chessboard animation');
             if (animationId) {
+                console.log('Cancelling existing animation');
                 cancelAnimationFrame(animationId);
             }
             
-            function animate() {
+            let frameCount = 0;
+            let lastTime = performance.now();
+            
+            function animate(currentTime) {
+                frameCount++;
+                
+                // 计算时间增量，确保按像素缓慢移动
+                const deltaTime = currentTime - lastTime;
+                lastTime = currentTime;
+                
+                // 按像素移动：每帧移动0.5像素（缓慢移动）
+                const pixelsPerSecond = 30; // 每秒移动30像素
+                const pixelsPerFrame = (pixelsPerSecond * deltaTime) / 1000;
+                
                 // 从右上到左下移动：X增加，Y减少
-                chessboardOffset = (chessboardOffset + 1) % 40; // 增加移动速度
+                chessboardOffset = (chessboardOffset + pixelsPerFrame) % 1000; // 使用大模数确保平滑
+                
+                if (frameCount % 60 === 0) { // 每60帧输出一次调试信息
+                    console.log(`Animation frame ${frameCount}, offset: ${chessboardOffset.toFixed(2)}, deltaTime: ${deltaTime.toFixed(2)}ms`);
+                }
+                
                 updateChessboardBackground();
                 animationId = requestAnimationFrame(animate);
             }
-            animate();
+            animate(performance.now());
         }
 
         function updateChessboardBackground() {
@@ -203,38 +241,77 @@
             // 清除画布
             ctx.clearRect(0, 0, width, height);
             
-            // 创建棋盘背景
+            // 创建伪无限棋盘背景
             const chessboardSize = 20; // 每个方块的大小
-            const offsetX = chessboardOffset; // X向右移动
-            const offsetY = -chessboardOffset; // Y向上移动（从右上到左下）
             
-            // 绘制棋盘背景
-            for (let y = -offsetY; y < height + chessboardSize; y += chessboardSize) {
-                for (let x = -offsetX; x < width + chessboardSize; x += chessboardSize) {
-                    const isDark = ((x + offsetX) / chessboardSize + (y + offsetY) / chessboardSize) % 2 >= 1;
+            // 使用浮点数偏移量实现像素级平滑移动
+            const offsetX = chessboardOffset % chessboardSize; // X方向偏移
+            const offsetY = (-chessboardOffset % chessboardSize + chessboardSize) % chessboardSize; // Y方向偏移
+            
+            // 计算需要绘制的棋盘范围，确保完全覆盖画布且不会出现短暂消失
+            const extraTiles = 3; // 增加额外边界确保完全覆盖
+            const startX = Math.floor(-chessboardSize * extraTiles);
+            const startY = Math.floor(-chessboardSize * extraTiles);
+            const endX = Math.ceil(width + chessboardSize * extraTiles);
+            const endY = Math.ceil(height + chessboardSize * extraTiles);
+            
+            // 使用整数坐标绘制，避免浮点数精度问题
+            const startGridX = Math.floor(startX / chessboardSize) * chessboardSize;
+            const startGridY = Math.floor(startY / chessboardSize) * chessboardSize;
+            const endGridX = Math.ceil(endX / chessboardSize) * chessboardSize;
+            const endGridY = Math.ceil(endY / chessboardSize) * chessboardSize;
+            
+            // 先绘制所有浅灰色背景
+            ctx.fillStyle = '#CCCCCC';
+            ctx.fillRect(startX, startY, endX - startX, endY - startY);
+            
+            // 然后绘制黑色格子
+            ctx.fillStyle = '#000000';
+            for (let y = startGridY; y < endGridY; y += chessboardSize) {
+                for (let x = startGridX; x < endGridX; x += chessboardSize) {
+                    // 计算格子的实际位置（考虑偏移）
+                    const gridX = x + offsetX;
+                    const gridY = y + offsetY;
+                    
+                    // 判断是否为黑色格子（使用更稳定的计算方法）
+                    const gridIndexX = Math.floor((gridX + chessboardSize * 1000) / chessboardSize);
+                    const gridIndexY = Math.floor((gridY + chessboardSize * 1000) / chessboardSize);
+                    const isDark = (gridIndexX + gridIndexY) % 2 === 0;
                     
                     if (isDark) {
-                        ctx.fillStyle = '#000000'; // 黑色方块
-                    } else {
-                        ctx.fillStyle = '#CCCCCC'; // 浅灰色方块
+                        // 确保黑色格子完全覆盖浅灰色背景
+                        ctx.fillRect(gridX, gridY, chessboardSize, chessboardSize);
                     }
-                    
-                    ctx.fillRect(x, y, chessboardSize, chessboardSize);
                 }
             }
             
-            // 如果有水印图像数据，则绘制水印
+            // 如果有水印图像数据，则使用不同的方法绘制水印，确保棋盘背景可见
             if (currentImageData) {
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.putImageData(currentImageData, 0, 0);
+                // 创建一个临时canvas来绘制水印
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // 在临时canvas上绘制水印
+                tempCtx.putImageData(currentImageData, 0, 0);
+                
+                // 在主画布上绘制临时canvas，使用source-over合成模式
+                // 这样透明区域会显示棋盘背景，不透明区域显示水印
+                ctx.drawImage(tempCanvas, 0, 0);
             }
         }
 
         function updateChessboardBackgroundWithData(imageData) {
+            console.log('updateChessboardBackgroundWithData called', {
+                imageDataWidth: imageData.width,
+                imageDataHeight: imageData.height
+            });
+            
             // 保存当前图像数据用于动画更新
             currentImageData = imageData;
             
-            // 更新棋盘背景和水印
+            // 立即更新棋盘背景和水印
             updateChessboardBackground();
         }
 
